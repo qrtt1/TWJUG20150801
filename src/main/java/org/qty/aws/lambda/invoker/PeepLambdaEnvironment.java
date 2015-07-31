@@ -21,7 +21,7 @@ public class PeepLambdaEnvironment {
 
         launchAndSave(executor, "001-list-files.txt", "/bin/ls", "-lsR");
         launchAndSave(executor, "002-export-env-vars.txt", "/bin/bash", "-c",
-                "whoami; echo; uname -a; echo; export; echo; locale");
+                "whoami; echo; uname -a; echo; export; echo; locale; echo; ulimit -a");
         launchAndSave(executor, "003-process-list.txt", "/bin/ps", "aux");
         launchAndSave(executor, "004-java.txt", "/bin/bash", "-c", "java -version; whereis java");
 
