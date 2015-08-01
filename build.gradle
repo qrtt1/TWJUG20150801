@@ -1,4 +1,15 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.amazonaws:aws-java-sdk-lambda:1.+'
+        classpath 'com.amazonaws:aws-java-sdk-s3:1.10.8'
+    }
+}
+
 repositories { jcenter() }
+
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
@@ -14,6 +25,8 @@ dependencies {
     compile 'commons-io:commons-io:2.+'
 }
 
+
+
 task buildZip(type: Zip) {
     from compileJava
     from processResources              
@@ -27,4 +40,64 @@ task buildZip(type: Zip) {
     }
 }
 
+task updateLambda(type: AwsLambdaUpdateTask) {
+
+    credentialsProfile = 'qty'
+
+    bucket = 'qty.lambda'
+    key = 'def.zip'
+
+    lambdaRegion = 'ap-northeast-1'
+    update bucket: bucket, key: key, function: 'HelloLambda'
+    update bucket: bucket, key: key, function: 'VideoPreviewTaskGenerator'
+    update bucket: bucket, key: key, function: 'VideoPreviewGenerator'
+
+}
+
 build.dependsOn buildZip
+
+
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.*;
+import com.amazonaws.services.lambda.AWSLambda;
+import com.amazonaws.services.lambda.AWSLambdaClient;
+import com.amazonaws.services.lambda.model.UpdateFunctionCodeRequest;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+
+class AwsLambdaUpdateTask extends DefaultTask {
+
+    String credentialsProfile;
+    String bucket;
+    String key;
+    String lambdaRegion;
+    def updateJobs = []
+
+    @TaskAction
+    def action() {
+
+        def lambdaPackage = project.file("build/distributions/${project.name}.zip")
+        if (!lambdaPackage.exists()) { throw new StopExecutionException() }
+
+        def credentials = new ProfileCredentialsProvider(credentialsProfile)
+
+        logger.info "upload $lambdaPackage.name to s3://$bucket/$key"
+        AmazonS3 amazonS3 = new AmazonS3Client(credentials);
+        amazonS3.putObject(bucket, key, lambdaPackage)
+
+        AWSLambda lambda = new AWSLambdaClient(credentials);
+        lambda.setRegion(Region.getRegion(Regions.fromName(lambdaRegion)));
+        updateJobs.each { 
+            logger.info "update-lambda-function $it"
+            lambda.updateFunctionCode(
+                new UpdateFunctionCodeRequest()
+                    .withS3Bucket(it.bucket).withS3Key(it.key)
+                    .withFunctionName(it.function)
+            )
+        }
+    }
+
+    def update(updateAction) {
+        updateJobs.add(updateAction)
+    }
+}
