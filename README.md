@@ -12,6 +12,8 @@
  * AWS re:Invent 2014 | Announcing AWS Lambda https://www.youtube.com/watch?v=9eHoyUVo-yg
  * AWS re:Invent 2014 | (MBL202) NEW LAUNCH: Getting Started with AWS Lambda https://www.youtube.com/watch?v=UFj27laTWQA
 
+* Lambda Limits http://docs.aws.amazon.com/lambda/latest/dg/limits.html
+
 ## Demo 1 HelloLambda
 
 實作 1 個簡易的『外部命令』執行程式 [HelloLambda](https://github.com/qrtt1/TWJUG20150801/blob/master/src/main/java/org/qty/aws/lambda/HelloLambda.java)，透過它來查看 Lambda 執行環境的狀態。
