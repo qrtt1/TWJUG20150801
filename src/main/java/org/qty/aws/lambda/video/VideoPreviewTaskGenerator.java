@@ -21,12 +21,15 @@ public class VideoPreviewTaskGenerator {
         FFMpeg ffmpeg = new FFMpeg();
         for (S3EventNotificationRecord record : input.getRecords()) {
             generateJobs(record, ffmpeg.getMediaDuration(S3Helper.getURLFromS3Entity(record.getS3())));
+            context.getLogger().log("generated s3://" 
+                + record.getS3().getBucket().getName() + "/"
+                + record.getS3().getObject().getKey());
         }
     }
 
     private void generateJobs(S3EventNotificationRecord record, int seconds) throws Exception {
 
-        ExecutorService executor = Executors.newFixedThreadPool(5);
+        ExecutorService executor = Executors.newFixedThreadPool(10);
         try {
             for (int offset = 0, index = 0; offset < seconds; offset += 30, index++) {
                 generateJobFile(record, executor, offset, index);

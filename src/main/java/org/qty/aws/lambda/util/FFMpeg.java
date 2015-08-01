@@ -7,9 +7,13 @@ import java.util.UUID;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class FFMpeg {
 
+    private static Log logger = LogFactory.getLog(FFMpeg.class);
+    
     final static String FFMPEG_COMMAND_PATH = getApplicationPath("ffmpeg");
     final static String FFPROBE_COMMAND_PATH = getApplicationPath("ffprobe");
 
@@ -19,6 +23,8 @@ public class FFMpeg {
 
     public int getMediaDuration(String media) throws FileNotFoundException, IOException {
         String result = new ApplicationExecutor(FFPROBE_COMMAND_PATH, "-i", media).execute(0);
+        logger.info(result);
+        
         String durationLine = StringUtils.trimToEmpty(StringUtils.substringBetween(result, "Duration:", ", start:"));
         return getDurationInSeconds(durationLine);
     }
