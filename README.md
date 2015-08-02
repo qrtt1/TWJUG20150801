@@ -64,3 +64,23 @@ job file 包含產截圖需要的資訊，例如 `offset` 是指定第幾秒，�
     "key": "videos/sample.mp4"
 }
 ```
+
+## Gradle Script
+
+此專案實作一個簡易的 `AwsLambdaUpdateTask`，讓開發者可以直接由 Gradle 更新：
+
+```groovy
+task deployLambdaFunctions(type: AwsLambdaUpdateTask) {
+
+    credentialsProfile = 'qty'
+
+    bucket = 'qty.lambda'
+    key = 'def.zip'
+
+    lambdaRegion = 'ap-northeast-1'
+    update bucket: bucket, key: key, function: 'HelloLambda'
+    update bucket: bucket, key: key, function: 'VideoPreviewTaskGenerator'
+    update bucket: bucket, key: key, function: 'VideoPreviewGenerator'
+
+}
+```
