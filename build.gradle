@@ -6,12 +6,26 @@ buildscript {
         classpath 'com.amazonaws:aws-java-sdk-lambda:1.+'
         classpath 'com.amazonaws:aws-java-sdk-s3:1.10.8'
     }
+
+    repositories {
+        mavenCentral()
+            maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath "jp.classmethod.aws:gradle-aws-plugin:0.24"
+    }
 }
+
+
 
 repositories { jcenter() }
 
 apply plugin: 'java'
 apply plugin: 'eclipse'
+
+apply plugin: "jp.classmethod.aws.s3"
+apply plugin: "jp.classmethod.aws.lambda"
+
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
@@ -25,80 +39,44 @@ dependencies {
     compile 'commons-io:commons-io:2.+'
 }
 
-
-
-task buildZip(type: Zip) {
+task buildZip(type: Zip, dependsOn: build) {
     from compileJava
-    from processResources              
+    from processResources
     into('lib') {
         from configurations.runtime
-    }           
-    eachFile { 
+    }
+    eachFile {
         if (it.name.contains(".so.")) fileMode 0755
         if (it.name.contains("ffprobe")) fileMode 0755
         if (it.name.contains("ffmpeg")) fileMode 0755
     }
 }
 
-task deployLambdaFunctions(type: AwsLambdaUpdateTask) {
 
-    credentialsProfile = 'qty'
 
-    bucket = 'qty.lambda'
-    key = 'def.zip'
-
-    lambdaRegion = 'ap-northeast-1'
-    update bucket: bucket, key: key, function: 'HelloLambda'
-    update bucket: bucket, key: key, function: 'VideoPreviewTaskGenerator'
-    update bucket: bucket, key: key, function: 'VideoPreviewGenerator'
-
+aws {
+    profileName = 'qty'
+    region = 'ap-northeast-1'
 }
 
-build.dependsOn buildZip
-deployLambdaFunctions.dependsOn buildZip
+import jp.classmethod.aws.gradle.s3.AmazonS3FileUploadTask
+task uploadLambdaPackage(type: AmazonS3FileUploadTask, dependsOn: buildZip) {
+    file file("build/distributions/${project.name}.zip")
+    bucketName 'qty.lambda'
+    key 'def2.zip'
+    overwrite true
+}
 
+import jp.classmethod.aws.gradle.lambda.AWSLambdaUpdateFunctionCodeTask;
+import jp.classmethod.aws.gradle.lambda.S3File;
 
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
-import com.amazonaws.services.s3.*;
-import com.amazonaws.services.lambda.AWSLambda;
-import com.amazonaws.services.lambda.AWSLambdaClient;
-import com.amazonaws.services.lambda.model.UpdateFunctionCodeRequest;
-import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
-
-class AwsLambdaUpdateTask extends DefaultTask {
-
-    String credentialsProfile;
-    String bucket;
-    String key;
-    String lambdaRegion;
-    def updateJobs = []
-
-    @TaskAction
-    def action() {
-
-        def lambdaPackage = project.file("build/distributions/${project.name}.zip")
-        if (!lambdaPackage.exists()) { throw new StopExecutionException() }
-
-        def credentials = new ProfileCredentialsProvider(credentialsProfile)
-
-        logger.info "upload $lambdaPackage.name to s3://$bucket/$key"
-        AmazonS3 amazonS3 = new AmazonS3Client(credentials);
-        amazonS3.putObject(bucket, key, lambdaPackage)
-
-        AWSLambda lambda = new AWSLambdaClient(credentials);
-        lambda.setRegion(Region.getRegion(Regions.fromName(lambdaRegion)));
-        updateJobs.each { 
-            logger.info "update-lambda-function $it"
-            lambda.updateFunctionCode(
-                new UpdateFunctionCodeRequest()
-                    .withS3Bucket(it.bucket).withS3Key(it.key)
-                    .withFunctionName(it.function)
-            )
-        }
-    }
-
-    def update(updateAction) {
-        updateJobs.add(updateAction)
+['HelloLambda', 'VideoPreviewTaskGenerator', 'VideoPreviewGenerator'].each { name ->
+    task "updateLambdaFunction$name" (type: AWSLambdaUpdateFunctionCodeTask, dependsOn: uploadLambdaPackage) {
+        description = "Update labmda function $name"
+        functionName = name
+        s3File = new S3File()
+        s3File.bucketName = 'qty.lambda'
+        s3File.key = 'def2.zip'
     }
 }
+
