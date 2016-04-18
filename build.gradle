@@ -8,11 +8,10 @@ buildscript {
     }
 
     repositories {
-        mavenCentral()
-            maven { url "https://plugins.gradle.org/m2/" }
+        mavenLocal()
     }
     dependencies {
-        classpath "jp.classmethod.aws:gradle-aws-plugin:0.24"
+        classpath "org.qty.gradle.aws.lambda:lambda.wrapper.plugin:0.0.1-SNAPSHOT"
     }
 }
 
@@ -23,9 +22,7 @@ repositories { jcenter() }
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-apply plugin: "jp.classmethod.aws.s3"
-apply plugin: "jp.classmethod.aws.lambda"
-
+apply plugin: "org.qty.aws.wrapper.lambda"
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
@@ -52,31 +49,23 @@ task buildZip(type: Zip, dependsOn: build) {
     }
 }
 
-
-
 aws {
     profileName = 'qty'
     region = 'ap-northeast-1'
 }
 
-import jp.classmethod.aws.gradle.s3.AmazonS3FileUploadTask
-task uploadLambdaPackage(type: AmazonS3FileUploadTask, dependsOn: buildZip) {
-    file file("build/distributions/${project.name}.zip")
-    bucketName 'qty.lambda'
-    key 'def2.zip'
-    overwrite true
-}
+lambdaConfig {
+    source {
+        file = "build/distributions/${project.name}.zip"
+    }
 
-import jp.classmethod.aws.gradle.lambda.AWSLambdaUpdateFunctionCodeTask;
-import jp.classmethod.aws.gradle.lambda.S3File;
-
-['HelloLambda', 'VideoPreviewTaskGenerator', 'VideoPreviewGenerator'].each { name ->
-    task "updateLambdaFunction$name" (type: AWSLambdaUpdateFunctionCodeTask, dependsOn: uploadLambdaPackage) {
-        description = "Update labmda function $name"
-        functionName = name
-        s3File = new S3File()
-        s3File.bucketName = 'qty.lambda'
-        s3File.key = 'def2.zip'
+    function {
+        HelloLambda
+        VideoPreviewTaskGenerator
+        VideoPreviewGenerator
     }
 }
 
+beforeLambdaUpdate {
+    dependsOn = [buildZip]
+}
