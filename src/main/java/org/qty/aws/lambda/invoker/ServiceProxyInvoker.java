@@ -6,14 +6,13 @@ import org.qty.aws.lambda.pojo.Command;
 import org.qty.aws.lambda.pojo.Result;
 
 import com.amazonaws.services.lambda.invoke.LambdaInvokerFactory;
-import com.amazonaws.util.json.JSONException;
 
 public class ServiceProxyInvoker {
 
-    public static void main(String[] args) throws JSONException {
+    public static void main(String[] args) {
 
-        RemoteCommandExecutor executor = LambdaInvokerFactory.build(RemoteCommandExecutor.class,
-                LambdaClientFactory.create());
+        RemoteCommandExecutor executor = LambdaInvokerFactory.builder().lambdaClient(LambdaClientFactory.create())
+                .build(RemoteCommandExecutor.class);
 
         Command command = new Command();
         command.setPath("/bin/ls");

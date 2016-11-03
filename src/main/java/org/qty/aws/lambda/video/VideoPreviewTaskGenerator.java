@@ -12,8 +12,7 @@ import org.qty.aws.lambda.util.S3Helper;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.s3.event.S3EventNotification.S3EventNotificationRecord;
-import com.amazonaws.util.json.JSONException;
-import com.amazonaws.util.json.JSONObject;
+import com.google.gson.JsonObject;
 
 public class VideoPreviewTaskGenerator {
 
@@ -41,12 +40,16 @@ public class VideoPreviewTaskGenerator {
     }
 
     private void generateJobFile(S3EventNotificationRecord record, ExecutorService executor, int offset, int index)
-            throws JSONException {
+             {
 
         String key = record.getS3().getObject().getKey();
-        String job = new JSONObject().put("bucket", record.getS3().getBucket().getName()).put("key", key)
-                .put("offset", offset).put("image_key", toImageKey(key, index)).toString();
-
+        JsonObject json = new JsonObject();
+        json.addProperty("bucket", record.getS3().getBucket().getName());
+        json.addProperty("key", key);
+        json.addProperty("offset", offset);
+        json.addProperty("image_key", toImageKey(key, index));
+        String job = json.toString();
+        
         CompletableFuture.runAsync(() -> {
             S3Helper.generateJobObject(record.getS3().getBucket().getName(), job);
         }, executor);

@@ -1,23 +1,26 @@
 package org.qty.aws.lambda.invoker;
 
-import java.util.Arrays;
-
 import com.amazonaws.services.lambda.model.InvokeRequest;
-import com.amazonaws.util.json.JSONException;
-import com.amazonaws.util.json.JSONObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 public class LowLevelInvoker {
 
-    public static void main(String[] args) throws JSONException {
+    public static void main(String[] args) {
 
-        String payload = new JSONObject()
-            .put("path", "/bin/ls")
-            .put("args", Arrays.asList("-lsR")).toString();
+        JsonObject object = new JsonObject();
+        object.addProperty("path", "/bin/ls");
 
-        byte[] data = LambdaClientFactory.create().invoke(new InvokeRequest()
-            .withFunctionName("HelloLambda")
-            .withPayload(payload)).getPayload().array();
+        JsonArray list = new JsonArray();
+        list.add("-lsR");
+        object.add("args", list);
 
-        System.out.println(new JSONObject(new String(data)).get("output"));
+        String payload = object.toString();
+
+        byte[] data = LambdaClientFactory.create()
+                .invoke(new InvokeRequest().withFunctionName("HelloLambda").withPayload(payload)).getPayload().array();
+
+        System.out.println(new JsonParser().parse(new String(data)).getAsJsonObject().get("output"));
     }
 }

@@ -8,7 +8,7 @@ import org.qty.aws.lambda.util.S3Helper;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.S3Event;
 import com.amazonaws.services.s3.event.S3EventNotification.S3EventNotificationRecord;
-import com.amazonaws.util.json.JSONObject;
+import com.google.gson.JsonObject;
 
 public class VideoPreviewGenerator {
 
@@ -19,9 +19,9 @@ public class VideoPreviewGenerator {
             String bucket = record.getS3().getBucket().getName();
             String object = record.getS3().getObject().getKey();
 
-            JSONObject json = S3Helper.getObjectAsJsonObject(bucket, object);
-            File outputFile = ffmpeg.captureImage(S3Helper.getURLFromJsonObject(json), json.getInt("offset"));
-            S3Helper.putObjectWithPublicRead(bucket, json.getString("image_key"), outputFile);
+            JsonObject json = S3Helper.getObjectAsJsonObject(bucket, object);
+            File outputFile = ffmpeg.captureImage(S3Helper.getURLFromJsonObject(json), json.get("offset").getAsInt());
+            S3Helper.putObjectWithPublicRead(bucket, json.get("image_key").getAsString(), outputFile);
             S3Helper.removeObject(bucket, object);
         }
     }
